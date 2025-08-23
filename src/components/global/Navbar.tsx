@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// Avatar removed for mobile menu; using hamburger icon
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,8 @@ import Logout from "../auth/Logout";
 import { User as SupabaseUser } from "@supabase/auth-js";
 import { createClient } from "@/utils/supabase/client";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 
 const Navbar = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -83,37 +85,38 @@ const Navbar = () => {
 
       {/* NAVIGATION */}
       <nav className="hidden sm:ml-6 sm:flex flex-grow justify-center items-center">
-        <NavLink href="/booking">Booking</NavLink>
-        {/* <NavLink href="/loading-example">Suspension Test</NavLink> */}
-        <NavLink href="/xxx">Global 404</NavLink>
+        <NavLink href="/admin">Dashboard</NavLink>
+        <NavLink href="/profile">Profile</NavLink>
+        <NavLink href="/settings">Settings</NavLink>
       </nav>
 
-      {/* DARK MODE BUTTON */}
-      <div className="flex items-center">
-        <ThemeToggler />
+      {/* Right side: dark mode, email, and hamburger menu */}
+      <div className="flex items-center gap-3">
+        {/* <ThemeToggler /> */}
 
-        {user && <span className="mr-3 text-white">{user.email}</span>}
+        {user && <span className="text-white">{user.email}</span>}
 
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Avatar>
-              <AvatarImage
-                src="https://res.cloudinary.com/dyb0qa58h/image/upload/v1699413824/wjykytitrfuv2ubnyzqd.png"
-                alt={user ? user.email ?? "Avatar" : "Avatar"}
-              />
-              <AvatarFallback>
-                {user ? user.email?.[0] ?? "U" : "U"}
-              </AvatarFallback>
-            </Avatar>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Open Menu">
+              <Menu className="h-5 w-5 text-white" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-white dark:bg-slate-600">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
+              <Link href={"/admin"}>Dashboard</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
               <Link href={"/profile"}>Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Logout /> {/* Use the Logout component */}
+              <Link href={"/settings"}>Settings</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Logout />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

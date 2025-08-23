@@ -2,8 +2,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export const createClient = () => {
-  const cookieStore = cookies() as any
+export const createClient = async () => {
+  const cookieStore = await cookies() as any
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ""
   const secure = siteUrl.startsWith("https://")
 

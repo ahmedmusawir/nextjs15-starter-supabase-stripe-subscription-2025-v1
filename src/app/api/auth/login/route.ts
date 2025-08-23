@@ -8,7 +8,7 @@ export const fetchCache = "force-no-store";
 
 // Testing the route
 export async function GET() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.from("posts").select("*");
 
   if (error) {
@@ -27,7 +27,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
