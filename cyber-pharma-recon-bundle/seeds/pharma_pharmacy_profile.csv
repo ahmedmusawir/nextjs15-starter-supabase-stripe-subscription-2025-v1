@@ -1,0 +1,2 @@
+pharmacy_id,pharmacy_name,address,phone,fax,email,ncpdp,npi,contact_person,created_at,updated_at
+4f80802a-67c7-4e90-ad7b-735b1cb12e98,Demo Pharmacy,1 Demo Way,555-1111,555-2222,demo@pharmacy.test,0000000,0000000000,Demo User,2025-08-22,2025-08-22

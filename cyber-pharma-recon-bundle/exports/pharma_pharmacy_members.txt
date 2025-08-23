@@ -1,0 +1,7 @@
+insert into public.pharma_pharmacy_members (pharmacy_id, user_id, role)
+values (
+  '0707ea1f-aca8-4c4d-acae-c75f5d668588',
+  'c83683ca-3f7f-4dc8-ab00-cac9cf2c702f',
+  'admin'
+);
+
