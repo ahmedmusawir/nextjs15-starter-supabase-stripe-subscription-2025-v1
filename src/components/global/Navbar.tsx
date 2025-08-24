@@ -85,7 +85,7 @@ const Navbar = () => {
 
       {/* NAVIGATION */}
       <nav className="hidden sm:ml-6 sm:flex flex-grow justify-center items-center">
-        <NavLink href="/admin">Dashboard</NavLink>
+        <NavLink href="/admin-portal">Dashboard</NavLink>
         <NavLink href="/profile">Profile</NavLink>
         <NavLink href="/settings">Settings</NavLink>
       </nav>
@@ -106,7 +106,7 @@ const Navbar = () => {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link href={"/admin"}>Dashboard</Link>
+              <Link href={"/admin-portal"}>Dashboard</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href={"/profile"}>Profile</Link>
