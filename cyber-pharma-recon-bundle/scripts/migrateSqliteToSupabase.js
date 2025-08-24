@@ -165,7 +165,7 @@ async function main() {
     await upsert('pharma_alt_rates', altRates, 'ndc');
     await upsert('pharma_pbm_info', pbmInfo, 'bin');
     await upsert('pharma_pharmacy_profile', profile, 'pharmacy_id');
-    await upsert('pharma_user_data', userData, 'script');
+    await upsert('pharma_user_data', userData, 'script,pharmacy_id');
     await upsert('pharma_report_files', reportFiles, 'script,report_type');
 
     console.log('Supabase upload complete.');
