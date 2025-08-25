@@ -38,6 +38,7 @@ const AdminSidebar = () => {
         onOwedFilter={setOwedFilter}
         onPbm={setPbm}
         onClear={clearFilters}
+        onApply={() => {}}
       />
     </div>
   );

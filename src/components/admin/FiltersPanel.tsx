@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
-import { Calendar, Filter as FilterIcon, Upload, XCircle } from "lucide-react";
+import { Calendar, Filter as FilterIcon, Upload, XCircle, RefreshCw } from "lucide-react";
 
 export interface FiltersPanelProps {
   fromDate: string;
@@ -17,6 +17,7 @@ export interface FiltersPanelProps {
   onPbm: (v: string) => void;
   onClear: () => void;
   onApply: () => void;
+  onRefresh?: () => void;
   isMobile?: boolean; // if true, wrap Apply with DialogClose
 }
 
@@ -32,6 +33,7 @@ export default function FiltersPanel({
   onPbm,
   onClear,
   onApply,
+  onRefresh,
   isMobile = false,
 }: FiltersPanelProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -148,6 +150,15 @@ export default function FiltersPanel({
           <Button className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50" variant="outline" onClick={onApply}>Apply</Button>
         )}
       </div>
+
+      {/* Get Fresh Data Button */}
+      {onRefresh && (
+        <div className="pt-3">
+          <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" onClick={onRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Get Fresh Data
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
