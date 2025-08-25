@@ -6,7 +6,10 @@ import { useUserDataStore } from "@/stores/useUserDataStore";
 
 const AdminSidebar = () => {
   // Zustand store (single source of truth)
-  const { filters, setFilters, applyFilters, setPage, fetchUserData, clearFilters: clearStoreFilters } = useUserDataStore();
+  const { filters, loading, setFilters, applyFilters, setPage, fetchUserData, clearFilters: clearStoreFilters } = useUserDataStore();
+
+  // Small UI busy flag to show spinner briefly on Apply/Clear (client-only)
+  const [uiBusy, setUiBusy] = React.useState(false);
 
   const activeCount = React.useMemo(() => {
     let c = 0;
@@ -18,15 +21,19 @@ const AdminSidebar = () => {
   }, [filters]);
 
   const handleApply = (form: { dateFrom?: string; dateTo?: string; owedType: 'all' | 'underpaid' | 'overpaid'; pbm?: string }) => {
+    setUiBusy(true);
     setFilters(form);
     applyFilters();
     setPage(1);
+    setTimeout(() => setUiBusy(false), 200);
   };
 
   const handleClear = () => {
+    setUiBusy(true);
     clearStoreFilters();
     applyFilters();
     setPage(1);
+    setTimeout(() => setUiBusy(false), 200);
   };
 
   return (
@@ -41,6 +48,7 @@ const AdminSidebar = () => {
         onApply={handleApply}
         onClear={handleClear}
         onRefresh={() => fetchUserData()}
+        loading={loading || uiBusy}
       />
     </div>
   );

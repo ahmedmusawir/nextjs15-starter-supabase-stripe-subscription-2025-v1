@@ -3,7 +3,7 @@ import React from "react";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { X, Filter, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
+import { X, Filter, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2 } from "lucide-react";
 import Page from "@/components/common/Page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -43,6 +43,9 @@ export default function AdminPortalContent() {
     fetchUserData,
     clearFilters: clearStoreFilters
   } = useUserDataStore();
+
+  // Small UI busy flag to show spinners on Apply/Clear/Refresh in mobile panel
+  const [uiBusyMobile, setUiBusyMobile] = React.useState(false);
 
   // Handler functions
   const clearFilters = () => {
@@ -117,6 +120,8 @@ export default function AdminPortalContent() {
 
   // Track which tab is currently active to adjust the visible Total label only
   const [activeTab, setActiveTab] = React.useState<string>("commercial");
+  // transient busy indicator for tab triggers so user sees instant feedback
+  const [tabBusy, setTabBusy] = React.useState<string | null>(null);
   const displayedTotal = React.useMemo(() => {
     if (activeTab === "commercial") return kpis.scriptsCommercial;
     return totalRecords;
@@ -287,17 +292,32 @@ export default function AdminPortalContent() {
                   initialPbm={filters.pbm || "All"}
                   activeCount={activeCount}
                   onApply={(form) => {
+                    setUiBusyMobile(true);
                     setFilters(form);
                     applyFilters();
                     setPage(1);
+                    setTimeout(() => setUiBusyMobile(false), 200);
                   }}
                   onClear={() => {
+                    setUiBusyMobile(true);
                     clearStoreFilters();
                     applyFilters();
                     setPage(1);
+                    setTimeout(() => setUiBusyMobile(false), 200);
                   }}
-                  onRefresh={handleRefreshData}
+                  onRefresh={() => {
+                    setUiBusyMobile(true);
+                    handleRefreshData();
+                    // Keep spinner until store loading flips back false
+                    const id = setInterval(() => {
+                      if (!loading) {
+                        clearInterval(id);
+                        setUiBusyMobile(false);
+                      }
+                    }, 100);
+                  }}
                   isMobile
+                  loading={loading || uiBusyMobile}
                 />
               </div>
             </DialogContent>
@@ -349,13 +369,49 @@ export default function AdminPortalContent() {
         {/* Tabs + Table */}
         <div className="px-4 pt-4">
           {/* Track active tab to adjust the "Total" label for Commercial */}
-          <Tabs defaultValue="commercial" onValueChange={(v) => setActiveTab(v)}>
+          <Tabs
+            defaultValue="commercial"
+            onValueChange={(v) => {
+              setActiveTab(v);
+              setTabBusy(v);
+              // brief visual feedback even if content mounts fast
+              window.setTimeout(() => setTabBusy((cur) => (cur === v ? null : cur)), 300);
+            }}
+          >
             <div className="overflow-x-auto">
               <TabsList className="min-w-max">
-                <TabsTrigger value="commercial">Commercial Dollars</TabsTrigger>
-                <TabsTrigger value="updated">Updated Commercial Payments</TabsTrigger>
-                <TabsTrigger value="federal">Federal Dollars</TabsTrigger>
-                <TabsTrigger value="summary">Summary</TabsTrigger>
+                <TabsTrigger value="commercial">
+                  <span className="inline-flex items-center gap-1">
+                    {(loading || tabBusy === "commercial") && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+                    )}
+                    <span>Commercial Dollars</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="updated">
+                  <span className="inline-flex items-center gap-1">
+                    {(loading || tabBusy === "updated") && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+                    )}
+                    <span>Updated Commercial Payments</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="federal">
+                  <span className="inline-flex items-center gap-1">
+                    {(loading || tabBusy === "federal") && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+                    )}
+                    <span>Federal Dollars</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="summary">
+                  <span className="inline-flex items-center gap-1">
+                    {(loading || tabBusy === "summary") && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin opacity-70" />
+                    )}
+                    <span>Summary</span>
+                  </span>
+                </TabsTrigger>
               </TabsList>
             </div>
 

@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
-import { Calendar, Filter as FilterIcon, Upload, XCircle, RefreshCw } from "lucide-react";
+import { Calendar, Filter as FilterIcon, Upload, XCircle, RefreshCw, Loader2 } from "lucide-react";
 
 export interface FiltersPanelProps {
   initialFromDate?: string;
@@ -15,6 +15,7 @@ export interface FiltersPanelProps {
   onClear: () => void;
   onRefresh?: () => void;
   isMobile?: boolean; // if true, wrap Apply with DialogClose
+  loading?: boolean; // show spinners/disable while store is loading
 }
 
 export default function FiltersPanel({
@@ -27,6 +28,7 @@ export default function FiltersPanel({
   onClear,
   onRefresh,
   isMobile = false,
+  loading = false,
 }: FiltersPanelProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const onUploadClick = () => fileInputRef.current?.click();
@@ -149,6 +151,7 @@ export default function FiltersPanel({
         <Button
           variant="outline"
           className="flex-1 border-2"
+          disabled={loading}
           onClick={() => {
             // Reset local state to defaults then inform parent to clear store filters
             setFromDate("");
@@ -165,18 +168,20 @@ export default function FiltersPanel({
             <Button
               className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50"
               variant="outline"
+              disabled={loading}
               onClick={() => onApply(buildPayload())}
             >
-              Apply
+              {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</>) : 'Apply'}
             </Button>
           </DialogClose>
         ) : (
           <Button
             className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50"
             variant="outline"
+            disabled={loading}
             onClick={() => onApply(buildPayload())}
           >
-            Apply
+            {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</>) : 'Apply'}
           </Button>
         )}
       </div>
@@ -184,8 +189,16 @@ export default function FiltersPanel({
       {/* Get Fresh Data Button */}
       {onRefresh && (
         <div className="pt-3">
-          <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" onClick={onRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Get Fresh Data
+          <Button
+            className="w-full bg-gray-800 text-white hover:bg-gray-900"
+            onClick={onRefresh}
+            disabled={loading}
+          >
+            {loading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing...</>
+            ) : (
+              <><RefreshCw className="mr-2 h-4 w-4" /> Get Fresh Data</>
+            )}
           </Button>
         </div>
       )}
