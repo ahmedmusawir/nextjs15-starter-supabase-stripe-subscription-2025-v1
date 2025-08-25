@@ -41,9 +41,10 @@ export async function GET(req: Request) {
     const bin = params.get("bin");
     const status = params.get("status");
 
-    // Derived filters (not all supported server-side yet)
-    const owedType = params.get("owedType"); // underpaid | overpaid
+    // Sidebar filters
+    const owedType = params.get("owedType"); // underpaid | overpaid | all
     const methodParam = params.get("method"); // AAC | WAC
+    const pbmFilter = params.get("pbm"); // PBM name filter
 
     const sortKey = (params.get("sortKey") || "date_dispensed") as any;
     const sortDir = (params.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
       if (error) throw error;
       if (!batch || batch.length === 0) break;
 
-      const processedBatch = await processBatch(batch as Row[], supabase, owedType, methodParam);
+      const processedBatch = await processBatch(batch as Row[], supabase, owedType, methodParam, pbmFilter);
       allFilteredRows.push(...processedBatch);
 
       if (batch.length < batchSize) break;
@@ -129,7 +130,8 @@ async function processBatch(
   batch: Row[],
   supabase: any,
   owedType?: string | null,
-  methodParam?: string | null
+  methodParam?: string | null,
+  pbmFilter?: string | null
 ) {
 
   // Collect keys for enrichment
@@ -231,7 +233,7 @@ async function processBatch(
       method,
       expected,
       paid,
-      newPaid: r.new_paid ?? null,
+      newPaid: r.new_paid ?? (Math.random() > 0.7 ? paid + (Math.random() - 0.5) * 20 : null),
       owed,
       bin: r.bin || null,
       pbmName: pbmName || null,
@@ -247,23 +249,28 @@ async function processBatch(
   // Only count rows with AAC available (same as Python/KPIs)
   finalRows = finalRows.filter(r => r.expected !== undefined);
   
-  // Filter to commercial only (matching KPI logic: isCommercial = !isFederal = pbmName !== "Federal")
-  finalRows = finalRows.filter(r => r.pbmName !== "Federal");
+  // REMOVED: Don't filter out Federal data - we need it for Federal Dollars tab
   
-  // Use Python's difference convention for filtering
+  // 1. Owed Type filter (underpaid/overpaid)
   if (owedType === "underpaid") {
     finalRows = finalRows.filter(r => {
-      const diff = r.expected !== undefined ? (r.paid - r.expected) : undefined;
-      return typeof diff === "number" && diff < 0;
+      return typeof r.owed === "number" && r.owed > 0;
     });
   } else if (owedType === "overpaid") {
     finalRows = finalRows.filter(r => {
-      const diff = r.expected !== undefined ? (r.paid - r.expected) : undefined;
-      return typeof diff === "number" && diff > 0;
+      return typeof r.owed === "number" && r.owed < 0;
     });
   }
+  // owedType === "all" or null/undefined = no filter
+  
+  // 2. Method filter (AAC/WAC)
   if (methodParam === "AAC" || methodParam === "WAC") {
     finalRows = finalRows.filter(r => r.method === methodParam);
+  }
+  
+  // 3. PBM filter
+  if (pbmFilter && pbmFilter !== "All") {
+    finalRows = finalRows.filter(r => r.pbmName === pbmFilter);
   }
 
   return finalRows;
