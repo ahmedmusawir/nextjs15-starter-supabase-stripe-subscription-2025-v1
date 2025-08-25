@@ -111,9 +111,16 @@ export default function AdminPortalContent() {
     return displayRows.slice(start, end);
   }, [displayRows, page, rowsPerPage]);
 
-  // Pagination totals
+  // Pagination totals (base on full filteredRows used by the table)
   const totalPages = Math.ceil(displayRows.length / rowsPerPage);
   const totalRecords = displayRows.length;
+
+  // Track which tab is currently active to adjust the visible Total label only
+  const [activeTab, setActiveTab] = React.useState<string>("commercial");
+  const displayedTotal = React.useMemo(() => {
+    if (activeTab === "commercial") return kpis.scriptsCommercial;
+    return totalRecords;
+  }, [activeTab, kpis.scriptsCommercial, totalRecords]);
 
   // Sorting state & helpers (table-level)
   type DisplayRow = typeof displayRows[0];
@@ -274,17 +281,21 @@ export default function AdminPortalContent() {
               <DrawerHeader title="Filters" />
               <div className="p-4">
                 <FiltersPanel
-                  fromDate={filters.dateFrom || ""}
-                  toDate={filters.dateTo || ""}
-                  owedFilter={filters.owedType === "underpaid" ? "Underpaid" : filters.owedType === "overpaid" ? "Overpaid" : "All"}
-                  pbm={filters.pbm || "All"}
+                  initialFromDate={filters.dateFrom || ""}
+                  initialToDate={filters.dateTo || ""}
+                  initialOwedFilter={filters.owedType === "underpaid" ? "Underpaid" : filters.owedType === "overpaid" ? "Overpaid" : "All"}
+                  initialPbm={filters.pbm || "All"}
                   activeCount={activeCount}
-                  onFromDate={(v) => { setFilters({ dateFrom: v || undefined }); applyFilters(); }}
-                  onToDate={(v) => { setFilters({ dateTo: v || undefined }); applyFilters(); }}
-                  onOwedFilter={(v) => { setFilters({ owedType: v.toLowerCase() === "underpaid" ? "underpaid" : v.toLowerCase() === "overpaid" ? "overpaid" : "all" }); applyFilters(); }}
-                  onPbm={(v) => { setFilters({ pbm: v === "All" ? undefined : v }); applyFilters(); }}
-                  onClear={clearFilters}
-                  onApply={handleApplyFilters}
+                  onApply={(form) => {
+                    setFilters(form);
+                    applyFilters();
+                    setPage(1);
+                  }}
+                  onClear={() => {
+                    clearStoreFilters();
+                    applyFilters();
+                    setPage(1);
+                  }}
                   onRefresh={handleRefreshData}
                   isMobile
                 />
@@ -332,12 +343,13 @@ export default function AdminPortalContent() {
             <Button size="sm" variant="outline" onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading}>Prev</Button>
             <Button size="sm" variant="outline" onClick={() => setPage(page + 1)} disabled={page >= totalPages || loading}>Next</Button>
           </div>
-          <span className="text-xs text-muted-foreground">Limit {rowsPerPage} | Total {totalRecords}</span>
+          <span className="text-xs text-muted-foreground">Limit {rowsPerPage} | Total {displayedTotal}</span>
         </div>
 
         {/* Tabs + Table */}
         <div className="px-4 pt-4">
-          <Tabs defaultValue="commercial">
+          {/* Track active tab to adjust the "Total" label for Commercial */}
+          <Tabs defaultValue="commercial" onValueChange={(v) => setActiveTab(v)}>
             <div className="overflow-x-auto">
               <TabsList className="min-w-max">
                 <TabsTrigger value="commercial">Commercial Dollars</TabsTrigger>
