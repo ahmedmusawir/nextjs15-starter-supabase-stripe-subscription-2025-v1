@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 interface Filters {
   dateFrom?: string;
@@ -52,7 +51,7 @@ type UserDataStore = {
   clearFilters: () => void;
 };
 
-const applyClientSideFilters = (allRows: Row[], filters: Filters): Row[] => {
+export const applyClientSideFilters = (allRows: Row[], filters: Filters): Row[] => {
   let filtered = [...allRows];
   
   // Date range filtering
@@ -91,7 +90,7 @@ const applyClientSideFilters = (allRows: Row[], filters: Filters): Row[] => {
   return filtered;
 };
 
-const calculateKPIs = (rows: Row[]): KPIData => {
+export const calculateKPIs = (rows: Row[]): KPIData => {
   // Filter to commercial scripts only (non-Federal)
   const commercialRows = rows.filter(r => r.pbmName !== 'Federal');
   
@@ -142,6 +141,7 @@ export const useUserDataStore = create<UserDataStore>((set, get) => ({
   
   applyFilters: () => {
     const { allRows, filters } = get();
+    console.info('[useUserDataStore] applyFilters()', { filters });
     const filteredRows = applyClientSideFilters(allRows, filters);
     const kpis = calculateKPIs(filteredRows);
     set({ filteredRows, kpis, page: 1 }); // Reset to page 1 when filters change

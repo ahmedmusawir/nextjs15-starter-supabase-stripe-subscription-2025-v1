@@ -2,26 +2,72 @@
 
 import React from "react";
 import FiltersPanel from "@/components/admin/FiltersPanel";
+import { useUserDataStore } from "@/stores/useUserDataStore";
+
+// Simple debounce hook
+function useDebouncedCallback<T extends (...args: any[]) => void>(fn: T, delay = 200) {
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cb = React.useCallback(
+    (...args: any[]) => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => fn(...args), delay);
+    },
+    [fn, delay]
+  );
+  React.useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    };
+  }, []);
+  return cb as T;
+}
 
 const AdminSidebar = () => {
-  // Local sidebar filter state (desktop). TODO: Lift to context to sync with content area.
-  const [fromDate, setFromDate] = React.useState("");
-  const [toDate, setToDate] = React.useState("");
-  const [owedFilter, setOwedFilter] = React.useState("All");
-  const [pbm, setPbm] = React.useState("All");
+  // Wire directly to Zustand store (single source of truth)
+  const { filters, setFilters, applyFilters, setPage, fetchUserData } = useUserDataStore();
+
+  const runApply = React.useCallback(() => {
+    applyFilters();
+    setPage(1);
+  }, [applyFilters, setPage]);
+
+  const runApplyDebounced = useDebouncedCallback(runApply, 200);
+
+  const fromDate = filters.dateFrom || "";
+  const toDate = filters.dateTo || "";
+  const owedFilter = filters.owedType === "underpaid" ? "Underpaid" : filters.owedType === "overpaid" ? "Overpaid" : "All";
+  const pbm = filters.pbm || "All";
 
   const activeCount = [
-    fromDate ? 1 : 0,
-    toDate ? 1 : 0,
-    owedFilter !== "All" ? 1 : 0,
-    pbm !== "All" ? 1 : 0,
+    filters.dateFrom ? 1 : 0,
+    filters.dateTo ? 1 : 0,
+    filters.owedType && filters.owedType !== "all" ? 1 : 0,
+    filters.pbm && filters.pbm !== "All" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
-    setFromDate("");
-    setToDate("");
-    setOwedFilter("All");
-    setPbm("All");
+    setFilters({ dateFrom: undefined, dateTo: undefined, owedType: "all", pbm: undefined });
+    runApply();
+  };
+
+  const onFromDate = (v: string) => {
+    setFilters({ dateFrom: v || undefined });
+    runApplyDebounced();
+  };
+  const onToDate = (v: string) => {
+    setFilters({ dateTo: v || undefined });
+    runApplyDebounced();
+  };
+  const onOwedFilter = (v: string) => {
+    const val = v.toLowerCase();
+    setFilters({ owedType: val === "underpaid" ? "underpaid" : val === "overpaid" ? "overpaid" : "all" });
+    runApply();
+  };
+  const onPbm = (v: string) => {
+    setFilters({ pbm: v === "All" ? undefined : v });
+    runApply();
   };
 
   return (
@@ -33,12 +79,13 @@ const AdminSidebar = () => {
         owedFilter={owedFilter}
         pbm={pbm}
         activeCount={activeCount}
-        onFromDate={setFromDate}
-        onToDate={setToDate}
-        onOwedFilter={setOwedFilter}
-        onPbm={setPbm}
+        onFromDate={onFromDate}
+        onToDate={onToDate}
+        onOwedFilter={onOwedFilter}
+        onPbm={onPbm}
         onClear={clearFilters}
-        onApply={() => {}}
+        onApply={runApply}
+        onRefresh={() => fetchUserData()}
       />
     </div>
   );

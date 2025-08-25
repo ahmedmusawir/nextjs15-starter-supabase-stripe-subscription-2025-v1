@@ -233,7 +233,7 @@ async function processBatch(
       method,
       expected,
       paid,
-      newPaid: r.new_paid ?? (Math.random() > 0.7 ? paid + (Math.random() - 0.5) * 20 : null),
+      newPaid: r.new_paid ?? null,
       owed,
       bin: r.bin || null,
       pbmName: pbmName || null,
