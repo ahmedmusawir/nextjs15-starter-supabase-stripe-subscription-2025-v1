@@ -74,7 +74,7 @@ export default function AdminPortalContent() {
   const [kpis, setKpis] = React.useState<GetKpisResponse | null>(null);
   const [page, setPage] = React.useState<number>(1);
   const [total, setTotal] = React.useState<number>(0);
-  const limit = 100;
+  const limit = 50;
 
   const owedTypeParam = React.useMemo(() => {
     if (owedFilter.toLowerCase() === "underpaid") return "underpaid" as const;

@@ -68,29 +68,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // Base query with RLS
-    let query = supabase
-      .from("pharma_user_data")
-      .select("*", { count: "exact" }) as any;
-
-    if (dateFrom) query = query.gte("date_dispensed", dateFrom);
-    if (dateTo) query = query.lte("date_dispensed", dateTo);
-    if (script) query = query.ilike("script", `%${script}%`);
-    if (ndc) query = query.ilike("drug_ndc", `%${ndc}%`);
-    if (drug) query = query.ilike("drug_name", `%${drug}%`);
-    if (bin) query = query.eq("bin", bin);
-    if (status) query = query.eq("status", status);
-
-    // Only allow sorting by known raw columns at the DB level
-    if (ALLOWED_SORT_KEYS.has(sortKey)) {
-      query = query.order(sortKey, { ascending: sortDir === "asc" });
-    } else {
-      query = query.order("date_dispensed", { ascending: false });
-    }
-    // Add a secondary deterministic sort to avoid page overlaps/holes
-    query = query.order("script", { ascending: true, nullsFirst: false });
-
-    // Get total count from KPIs endpoint approach
+    // Use derived-first pagination approach (batch, enrich, filter, then paginate)
     const batchSize = 1000;
     let start = 0;
     let allFilteredRows: any[] = [];
@@ -136,8 +114,6 @@ export async function GET(req: Request) {
       limit,
     };
 
-    console.log(`/api/user-data: totalDerived=${totalDerived}, pageRows=${pageRows.length}, page=${page}`);
-    console.log(`Sample newPaid values:`, pageRows.slice(0, 3).map(r => ({ script: r.script, newPaid: r.newPaid })));
 
     return NextResponse.json(response);
   } catch (e: any) {
@@ -255,7 +231,7 @@ async function processBatch(
       method,
       expected,
       paid,
-      newPaid: r.new_paid ?? (Math.random() < 0.1 ? paid + (Math.random() - 0.5) * 20 : null), // 10% chance of having updated payment for demo
+      newPaid: r.new_paid ?? null,
       owed,
       bin: r.bin || null,
       pbmName: pbmName || null,
@@ -270,6 +246,9 @@ async function processBatch(
   
   // Only count rows with AAC available (same as Python/KPIs)
   finalRows = finalRows.filter(r => r.expected !== undefined);
+  
+  // Filter to commercial only (matching KPI logic: isCommercial = !isFederal = pbmName !== "Federal")
+  finalRows = finalRows.filter(r => r.pbmName !== "Federal");
   
   // Use Python's difference convention for filtering
   if (owedType === "underpaid") {
