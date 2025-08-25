@@ -16,6 +16,7 @@ export interface FiltersPanelProps {
   onOwedFilter: (v: string) => void;
   onPbm: (v: string) => void;
   onClear: () => void;
+  onApply: () => void;
   isMobile?: boolean; // if true, wrap Apply with DialogClose
 }
 
@@ -30,6 +31,7 @@ export default function FiltersPanel({
   onOwedFilter,
   onPbm,
   onClear,
+  onApply,
   isMobile = false,
 }: FiltersPanelProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -109,10 +111,27 @@ export default function FiltersPanel({
           className="w-full rounded-md border border-orange-500 bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-orange-500"
         >
           <option>All</option>
+          <option>AssistRx</option>
+          <option>Benecard</option>
+          <option>Capital RX</option>
+          <option>Caremark</option>
+          <option>Drexi</option>
+          <option>DST</option>
+          <option>Employer Health Options</option>
           <option>Express Scripts</option>
-          <option>OptumRx</option>
           <option>Federal</option>
           <option>MedImpact</option>
+          <option>OptumRx</option>
+          <option>Sav-Rx</option>
+          <option>Script Care</option>
+          <option>ScriptClaim</option>
+          <option>ScriptCycle</option>
+          <option>ScriptGuideRx</option>
+          <option>ScriptSave</option>
+          <option>Scriptcare</option>
+          <option>Select Health</option>
+          <option>SenRx</option>
+          <option>SmithRx Commercial</option>
         </select>
       </div>
 
@@ -123,10 +142,10 @@ export default function FiltersPanel({
         </Button>
         {isMobile ? (
           <DialogClose asChild>
-            <Button className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50" variant="outline">Apply</Button>
+            <Button className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50" variant="outline" onClick={onApply}>Apply</Button>
           </DialogClose>
         ) : (
-          <Button className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50" variant="outline">Apply</Button>
+          <Button className="flex-1 border-2 border-orange-600 text-orange-700 hover:bg-orange-50" variant="outline" onClick={onApply}>Apply</Button>
         )}
       </div>
     </div>

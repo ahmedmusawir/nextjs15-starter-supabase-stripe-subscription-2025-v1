@@ -26,10 +26,10 @@ function DrawerHeader({ title, onClose }: { title: string; onClose?: () => void 
 
 export default function AdminPortalContent() {
   const email = "frank@example.com";
-  const [fromDate, setFromDate] = React.useState<string>("");
-  const [toDate, setToDate] = React.useState<string>("");
-  const [owedFilter, setOwedFilter] = React.useState<string>("All");
-  const [pbm, setPbm] = React.useState<string>("All");
+  const [fromDate, setFromDate] = React.useState<string>("2025-06-01");
+  const [toDate, setToDate] = React.useState<string>("2025-08-25");
+  const [owedFilter, setOwedFilter] = React.useState<string>("Underpaid");
+  const [pbm, setPbm] = React.useState<string>("Caremark");
 
   const activeCount = React.useMemo(() => {
     let c = 0;
@@ -45,6 +45,12 @@ export default function AdminPortalContent() {
     setToDate("");
     setOwedFilter("All");
     setPbm("All");
+    setPage(1); // Reset to page 1 when clearing filters
+  };
+
+  const applyFilters = () => {
+    setPage(1); // Reset to page 1 when applying filters
+    // Data will automatically reload due to useEffect dependencies
   };
 
   // --- Step 3: static data for main area ---
@@ -89,7 +95,7 @@ export default function AdminPortalContent() {
       const res = await ClaimsServices.getClaims({
         dateFrom: fromDate || undefined,
         dateTo: toDate || undefined,
-        // pbm UI currently shows names; API expects bin. Skip until wired.
+        pbm: pbm !== "All" ? pbm : undefined,
         owedType: owedTypeParam,
         sortKey: "date_dispensed",
         sortDir: "desc",
@@ -119,7 +125,7 @@ export default function AdminPortalContent() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, owedTypeParam, page]);
+  }, [fromDate, toDate, owedTypeParam, pbm, page]);
 
   const loadKpis = React.useCallback(async () => {
     try {
@@ -128,6 +134,7 @@ export default function AdminPortalContent() {
         dateFrom: fromDate || undefined,
         dateTo: toDate || undefined,
         owedType: owedTypeParam,
+        pbm: pbm !== "All" ? pbm : undefined,
       });
       setKpis(data);
     } catch (e) {
@@ -136,7 +143,7 @@ export default function AdminPortalContent() {
     } finally {
       setKpiLoading(false);
     }
-  }, [fromDate, toDate, owedTypeParam]);
+  }, [fromDate, toDate, owedTypeParam, pbm]);
 
   // Load claims when filters or page changes
   React.useEffect(() => {
@@ -324,6 +331,7 @@ export default function AdminPortalContent() {
                   onOwedFilter={setOwedFilter}
                   onPbm={setPbm}
                   onClear={clearFilters}
+                  onApply={applyFilters}
                   isMobile
                 />
               </div>

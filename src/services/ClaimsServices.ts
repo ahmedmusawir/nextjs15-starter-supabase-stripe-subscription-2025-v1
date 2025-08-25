@@ -10,6 +10,7 @@ export type GetClaimsParams = {
   status?: string;
   owedType?: 'underpaid' | 'overpaid' | 'all';
   method?: 'AAC' | 'WAC';
+  pbm?: string;
   sortKey?: string;
   sortDir?: 'asc' | 'desc';
   page?: number;
@@ -68,6 +69,7 @@ const buildQuery = (params: GetClaimsParams): string => {
   if (params.status) q.set('status', params.status);
   if (params.owedType && params.owedType !== 'all') q.set('owedType', params.owedType);
   if (params.method) q.set('method', params.method);
+  if (params.pbm) q.set('pbm', params.pbm);
   if (params.sortKey) q.set('sortKey', params.sortKey);
   if (params.sortDir) q.set('sortDir', params.sortDir);
   if (params.page) q.set('page', String(params.page));
@@ -124,6 +126,7 @@ export async function getKpis(params: GetKpisParams = {}): Promise<GetKpisRespon
   if (params.status) q.set('status', params.status);
   if (params.owedType && params.owedType !== 'all') q.set('owedType', params.owedType);
   if (params.method) q.set('method', params.method);
+  if (params.pbm) q.set('pbm', params.pbm);
   const s = q.toString();
   const query = s ? `?${s}` : '';
   const res = await fetch(`/api/kpis${query}`, { cache: 'no-store' });
