@@ -84,13 +84,11 @@ const Navbar = () => {
       </Link>
 
       {/* NAVIGATION */}
-      {user && (
-        <nav className="hidden sm:ml-6 sm:flex flex-grow justify-center items-center">
-          <NavLink href="/admin-portal">Dashboard</NavLink>
-          <NavLink href="/profile">Profile</NavLink>
-          <NavLink href="/settings">Settings</NavLink>
-        </nav>
-      )}
+      <nav className="hidden sm:ml-6 sm:flex flex-grow justify-center items-center">
+        <NavLink href="/admin-portal">Dashboard</NavLink>
+        <NavLink href="/profile">Profile</NavLink>
+        <NavLink href="/settings">Settings</NavLink>
+      </nav>
 
       {/* Right side: dark mode, email, and hamburger menu */}
       <div className="flex items-center gap-3">
@@ -105,30 +103,21 @@ const Navbar = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-white dark:bg-slate-600">
-            {user && (
-              <>
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link href={"/admin-portal"}>Dashboard</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href={"/profile"}>Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href={"/settings"}>Settings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Logout />
-                </DropdownMenuItem>
-              </>
-            )}
-            {!user && (
-              <DropdownMenuItem>
-                <Link href={"/auth"}>Log In</Link>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Link href={"/admin-portal"}>Dashboard</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link href={"/profile"}>Profile</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link href={"/settings"}>Settings</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Logout />
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
