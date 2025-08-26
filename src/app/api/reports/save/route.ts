@@ -4,37 +4,40 @@ import { Buffer } from "node:buffer";
 import { generateReportPdfBuffer, type ReportRow } from "@/server/reports/pdf";
 import { buildReportFilename, slugify } from "@/utils/slug";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient as createServerClient } from "@/utils/supabase/server";
 
 type SavePayload = {
   tab: "commercial" | "updated" | "federal" | "summary";
-  dateFrom: string; // YYYY-MM-DD
-  dateTo: string;   // YYYY-MM-DD
+  dateFrom: string | null; // YYYY-MM-DD | null
+  dateTo: string | null;   // YYYY-MM-DD | null
   pbmName: string;
   rows: ReportRow[];
-  pharmacySlug?: string; // if omitted, we return the PDF download instead of uploading
+  // Optional escape hatch: if true, return direct download (no auth upload)
+  noAuthDownload?: boolean;
 };
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as SavePayload;
-    const { tab, dateFrom, dateTo, pbmName, rows, pharmacySlug } = body || ({} as SavePayload);
-    if (!tab || !dateFrom || !dateTo || !pbmName || !Array.isArray(rows)) {
-      return jsonError(400, "Missing required fields: tab, dateFrom, dateTo, pbmName, rows");
+    const { tab, dateFrom, dateTo, pbmName, rows, noAuthDownload } = body || ({} as SavePayload);
+    if (!tab || !pbmName || !Array.isArray(rows)) {
+      return jsonError(400, "Missing required fields: tab, pbmName, rows");
     }
 
     const folder = folderForTab(tab);
     const pbmSlug = slugify(pbmName);
 
     const title = `${labelForTab(tab)} Report`;
-    const subtitle = `${pbmName} — ${dateFrom} to ${dateTo}`;
+    const range = [dateFrom || undefined, dateTo || undefined].filter(Boolean).join(" to ");
+    const subtitle = range ? `${pbmName} — ${range}` : `${pbmName}`;
     const pdf = await generateReportPdfBuffer(rows, {
       title,
       subtitle,
     });
 
-    if (!pharmacySlug) {
-      // No tenant provided; return the file directly for download
-      const filename = buildReportFilename({ folder, pbmSlug, from: dateFrom, to: dateTo });
+    if (noAuthDownload) {
+      // Explicitly requested a direct download (no auth / no upload)
+      const filename = buildReportFilename({ folder, pbmSlug, from: dateFrom || 'na', to: dateTo || 'na' });
       return new Response(pdf, {
         status: 200,
         headers: {
@@ -45,9 +48,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Derive pharmacy slug from authenticated user
+    const ssr = await createServerClient();
+    const {
+      data: { user },
+      error: userErr,
+    } = await ssr.auth.getUser();
+    if (userErr || !user) return jsonError(401, "Not authenticated");
+
     const supa = createAdminClient();
+    const pharmacySlug = await getPharmacySlugForUser(supa, user.id);
+    if (!pharmacySlug) return jsonError(403, "No pharmacy slug found for current user");
     const bucket = "pharma_reports";
-    const filename = buildReportFilename({ folder, pbmSlug, from: dateFrom, to: dateTo });
+    const filename = buildReportFilename({ folder, pbmSlug, from: dateFrom || 'na', to: dateTo || 'na' });
     const storagePath = `${pharmacySlug}/${folder}/${filename}`;
 
     const { error: uploadErr } = await supa.storage.from(bucket).upload(storagePath, pdf, {
@@ -73,7 +86,7 @@ function folderForTab(tab: SavePayload["tab"]) {
     case "commercial":
       return "report_commercialdollars";
     case "updated":
-      return "report_updatedpayments";
+      return "report_updatedcommercialdollars";
     case "federal":
       return "report_federaldollars";
     case "summary":
@@ -103,4 +116,40 @@ function jsonError(status: number, message: string) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// Resolve the current user's pharmacy slug using known tables.
+async function getPharmacySlugForUser(supa: ReturnType<typeof createAdminClient>, userId: string) {
+  console.debug(`[getPharmacySlugForUser] Looking up slug for userId: ${userId}`);
+  
+  // 1) Check pharma_pharmacy_members to get pharmacy_id for the user
+  {
+    console.debug(`[getPharmacySlugForUser] Checking pharma_pharmacy_members...`);
+    const { data, error } = await supa
+      .from("pharma_pharmacy_members")
+      .select("pharmacy_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    console.debug(`[getPharmacySlugForUser] pharma_pharmacy_members result:`, { data, error });
+    if (!error && data) {
+      const pharmacyId = (data as any)?.pharmacy_id as string | number | null | undefined;
+      if (pharmacyId) {
+        console.debug(`[getPharmacySlugForUser] Found pharmacy_id in pharma_pharmacy_members: ${pharmacyId}, looking up in pharma_pharmacy_profile...`);
+        const { data: pharm, error: pharmErr } = await supa
+          .from("pharma_pharmacy_profile")
+          .select("pharmacy_slug")
+          .eq("pharmacy_id", pharmacyId)
+          .maybeSingle();
+        console.debug(`[getPharmacySlugForUser] pharma_pharmacy_profile result:`, { pharm, pharmErr });
+        if (!pharmErr && (pharm as any)?.pharmacy_slug) {
+          const foundSlug = (pharm as any).pharmacy_slug as string;
+          console.debug(`[getPharmacySlugForUser] Found slug via pharmacy_id: ${foundSlug}`);
+          return foundSlug;
+        }
+      }
+    }
+  }
+  
+  console.debug(`[getPharmacySlugForUser] No slug found for userId: ${userId}`);
+  return null;
 }

@@ -22,14 +22,14 @@ export async function POST(req: NextRequest) {
 
     // Fetch PBM email from DB
     const supa = createAdminClient();
-    const { data: pbmRow, error: pbmErr } = await supa
-      .from("pbm_info")
+    const { data: pbmRows, error: pbmErr } = await supa
+      .from("pharma_pbm_info")
       .select("email")
       .eq("pbm_name", pbmName)
-      .maybeSingle();
+      .limit(1);
     if (pbmErr) return jsonError(500, `PBM lookup failed: ${pbmErr.message}`);
-    const pbmEmail = pbmRow?.email as string | undefined;
-    if (!pbmEmail) return jsonError(400, `No email found for PBM: ${pbmName}`);
+    const pbmEmail = Array.isArray(pbmRows) && pbmRows.length > 0 ? (pbmRows[0] as any).email as string : undefined;
+    if (!pbmEmail) return jsonError(404, `No email found for PBM: ${pbmName}`);
 
     // Compose subject/body (parity with desktop style)
     const range = [dateFrom, dateTo].filter(Boolean).join(" to ");

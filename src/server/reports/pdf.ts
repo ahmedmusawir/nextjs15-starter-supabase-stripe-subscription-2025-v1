@@ -1,6 +1,6 @@
-import PDFDocument from "pdfkit";
+// Use the standalone build which bundles the standard fonts and avoids fs reads
+import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
 import { Buffer } from "node:buffer";
-import type PDFDocumentType from "pdfkit";
 
 export type ReportRow = {
   script?: string;
@@ -74,11 +74,13 @@ export async function generateReportPdfBuffer(
 
   return await new Promise<Buffer>((resolve, reject) => {
     doc.on("end", () => resolve(Buffer.concat(chunks as unknown as readonly Uint8Array[])));
-    doc.on("error", (e) => reject(e));
+    doc.on("error", (err: unknown) => {
+      reject(err instanceof Error ? err : new Error(String(err)));
+    });
   });
 }
 
-function drawRow(doc: PDFDocumentType, values: any[], widths?: number[]) {
+function drawRow(doc: any, values: any[], widths?: number[]) {
   const padX = 4;
   let x = doc.page.margins.left;
   const y = doc.y;
@@ -90,7 +92,7 @@ function drawRow(doc: PDFDocumentType, values: any[], widths?: number[]) {
   doc.moveDown(0.4);
 }
 
-function drawHr(doc: PDFDocumentType) {
+function drawHr(doc: any) {
   const y = doc.y + 2;
   doc.moveTo(doc.page.margins.left, y).lineTo(doc.page.width - doc.page.margins.right, y).stroke("#999");
   doc.moveDown(0.4);
