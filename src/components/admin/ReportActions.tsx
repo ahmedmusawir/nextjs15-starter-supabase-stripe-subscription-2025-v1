@@ -18,7 +18,7 @@ export default function ReportActions({ activeTab }: Props) {
   const pbm = filters.pbm ?? "All";
 
   const canShowSave = owedType === "underpaid" && pbm !== "All"; // Federal allowed
-  const canShowEmail = pbm !== "All" && pbm !== "Federal"; // independent of owedType
+  const canShowEmail = pbm !== "All" && pbm !== "Federal" && lastSavedPdfPath; // require saved PDF
   const showEmailLabel = owedType === "underpaid" && pbm !== "All" && pbm !== "Federal";
 
   const handleSave = async () => {

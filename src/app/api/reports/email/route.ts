@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 import { NextRequest } from "next/server";
-import MailComposer from "mailcomposer";
+const MailComposer = require("mailcomposer");
 import { createAdminClient } from "@/utils/supabase/admin";
 import { Buffer } from "node:buffer";
 
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build EML for user's desktop email client
-    const mail = new MailComposer({
+    // Build EML for user's desktop email client (mailcomposer v4 API)
+    const mail = MailComposer({
       from: "noreply@cyberpharma.local", // envelope only; user will send from their client
       to: pbmEmail,
       subject,
@@ -62,8 +62,61 @@ export async function POST(req: NextRequest) {
     });
 
     const emlBuffer: Buffer = await new Promise((resolve, reject) => {
-      mail.compile().build((err, message) => (err ? reject(err) : resolve(message)));
+      mail.build((err: any, message: Buffer) => (err ? reject(err) : resolve(message)));
     });
+
+    // Best-effort DB status updates (do not block the response)
+    try {
+      // We require at least one pdfPath to know which pharmacy to mark rows for
+      if (Array.isArray(body.pdfPaths) && body.pdfPaths.length > 0) {
+        const firstPath = body.pdfPaths[0] || "";
+        const normalized = firstPath.startsWith("/") ? firstPath.slice(1) : firstPath;
+        const pharmacySlug = normalized.split("/")[0];
+
+        // Resolve pharmacy_id from slug
+        const { data: profile, error: profErr } = await supa
+          .from("pharma_pharmacy_profile")
+          .select("pharmacy_id")
+          .eq("pharmacy_slug", pharmacySlug)
+          .maybeSingle();
+        if (!profErr && profile?.pharmacy_id) {
+          const pharmacyId = profile.pharmacy_id as string;
+
+          // Determine bins for PBM filter; Federal has NULL bin
+          let bins: string[] | null = null;
+          if (pbmName && pbmName !== "Federal") {
+            const { data: binRows, error: binErr } = await supa
+              .from("pharma_pbm_info")
+              .select("bin")
+              .eq("pbm_name", pbmName);
+            if (!binErr) {
+              bins = (binRows || []).map((r: any) => r.bin).filter((b: any) => !!b);
+            }
+          }
+
+          // Build update query for pharma_user_data
+          let upd: any = supa
+            .from("pharma_user_data")
+            .update({ status: "emailed", pdf_file: normalized })
+            .eq("pharmacy_id", pharmacyId);
+
+          if (dateFrom) upd = upd.gte("date_dispensed", dateFrom);
+          if (dateTo) upd = upd.lte("date_dispensed", dateTo);
+
+          if (pbmName === "Federal") {
+            upd = upd.is("bin", null);
+          } else if (bins && bins.length > 0) {
+            upd = upd.in("bin", bins);
+          } else if (pbmName && pbmName !== "All") {
+            // If PBM provided but no bins resolved, likely nothing to update; skip
+          }
+
+          await upd;
+        }
+      }
+    } catch (updateErr) {
+      console.warn("[reports/email] DB status update failed:", updateErr);
+    }
 
     const fileName = `${sanitizeFile(subject)}.eml`;
     return new Response(emlBuffer, {
