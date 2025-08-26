@@ -11,6 +11,7 @@ import FiltersPanel from "@/components/admin/FiltersPanel";
 import Spinner from "@/components/common/Spinner";
 // Removed ClaimsServices - using Zustand store only
 import { useUserDataStore } from "@/stores/useUserDataStore";
+import ReportActions from "@/components/admin/ReportActions";
 
 function DrawerHeader({ title, onClose }: { title: string; onClose?: () => void }) {
   return (
@@ -330,6 +331,11 @@ export default function AdminPortalContent() {
           <p className="text-base font-semibold text-muted-foreground">
             Ledger-level clarity on what's still owed
           </p>
+        </div>
+
+        {/* Actions (full width row; left label + right buttons) */}
+        <div className="px-4 pt-2">
+          <ReportActions activeTab={activeTab as any} />
         </div>
 
         {/* KPI strip (sticky) with prominent pills */}
