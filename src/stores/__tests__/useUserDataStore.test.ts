@@ -67,3 +67,119 @@ describe('calculateKPIs', () => {
     expect(k.owedTotal).toBe(10);
   });
 });
+
+describe('useUserDataStore PDF state management', () => {
+  let store: any;
+
+  beforeEach(() => {
+    // Import the store fresh for each test to avoid state pollution
+    jest.resetModules();
+    const { useUserDataStore } = require('../useUserDataStore');
+    store = useUserDataStore.getState();
+  });
+
+  describe('setLastSavedPdfForContext', () => {
+    it('should store PDF paths for a specific context', () => {
+      const paths = ['pharmacy/report_commercial/test.pdf'];
+      
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', paths);
+      
+      const retrieved = store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(retrieved).toEqual(paths);
+    });
+
+    it('should handle multiple PDF paths', () => {
+      const paths = [
+        'pharmacy/report_commercial/test1.pdf',
+        'pharmacy/report_commercial/test2.pdf'
+      ];
+      
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', paths);
+      
+      const retrieved = store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(retrieved).toEqual(paths);
+    });
+
+    it('should handle empty array', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', []);
+      
+      const retrieved = store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(retrieved).toEqual([]);
+    });
+
+    it('should create unique keys for different contexts', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', ['path1.pdf']);
+      store.setLastSavedPdfForContext('federal', 'OptumRx', '2025-01-01', '2025-01-31', ['path2.pdf']);
+      store.setLastSavedPdfForContext('commercial', 'Caremark', '2025-01-01', '2025-01-31', ['path3.pdf']);
+      
+      expect(store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31')).toEqual(['path1.pdf']);
+      expect(store.getLastSavedPdfForContext('federal', 'OptumRx', '2025-01-01', '2025-01-31')).toEqual(['path2.pdf']);
+      expect(store.getLastSavedPdfForContext('commercial', 'Caremark', '2025-01-01', '2025-01-31')).toEqual(['path3.pdf']);
+    });
+  });
+
+  describe('getLastSavedPdfForContext', () => {
+    it('should return empty array for non-existent context', () => {
+      const retrieved = store.getLastSavedPdfForContext('commercial', 'NonExistent', '2025-01-01', '2025-01-31');
+      expect(retrieved).toEqual([]);
+    });
+
+    it('should return stored paths for existing context', () => {
+      const paths = ['test.pdf'];
+      store.setLastSavedPdfForContext('summary', 'OptumRx', '2025-02-01', '2025-02-28', paths);
+      
+      const retrieved = store.getLastSavedPdfForContext('summary', 'OptumRx', '2025-02-01', '2025-02-28');
+      expect(retrieved).toEqual(paths);
+    });
+  });
+
+  describe('hasSavedPdfForContext', () => {
+    it('should return false for non-existent context', () => {
+      const hasPdf = store.hasSavedPdfForContext('commercial', 'NonExistent', '2025-01-01', '2025-01-31');
+      expect(hasPdf).toBe(false);
+    });
+
+    it('should return false for empty array', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', []);
+      
+      const hasPdf = store.hasSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(hasPdf).toBe(false);
+    });
+
+    it('should return true when PDFs exist', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', ['test.pdf']);
+      
+      const hasPdf = store.hasSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(hasPdf).toBe(true);
+    });
+
+    it('should return true for multiple PDFs', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', ['test1.pdf', 'test2.pdf']);
+      
+      const hasPdf = store.hasSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(hasPdf).toBe(true);
+    });
+  });
+
+  describe('context key generation', () => {
+    it('should generate consistent keys for same parameters', () => {
+      const paths1 = ['test1.pdf'];
+      const paths2 = ['test2.pdf'];
+      
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', paths1);
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', paths2);
+      
+      // Second call should overwrite first
+      const retrieved = store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31');
+      expect(retrieved).toEqual(paths2);
+    });
+
+    it('should differentiate between different date ranges', () => {
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31', ['jan.pdf']);
+      store.setLastSavedPdfForContext('commercial', 'OptumRx', '2025-02-01', '2025-02-28', ['feb.pdf']);
+      
+      expect(store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-01-01', '2025-01-31')).toEqual(['jan.pdf']);
+      expect(store.getLastSavedPdfForContext('commercial', 'OptumRx', '2025-02-01', '2025-02-28')).toEqual(['feb.pdf']);
+    });
+  });
+});

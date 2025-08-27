@@ -4,7 +4,7 @@ module.exports = {
   preset: 'ts-jest',
 
   // The environment in which the tests are run
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
 
   // Automatically clear mock calls and instances between every test
   clearMocks: true,
@@ -20,6 +20,22 @@ module.exports = {
 
   // A map from regular expressions to paths to transformers
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.jest.json',
+      },
+    ],
   },
+
+  // Module name mapping for path aliases
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  
+  // Setup files to run before tests
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+
+  // Set a longer timeout for async tests
+  testTimeout: 10000,
 };
