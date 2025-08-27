@@ -26,6 +26,8 @@ export default function ReportActions({ activeTab }: Props) {
   const [emailing, setEmailing] = React.useState(false);
   const [downloading, setDownloading] = React.useState(false);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [pbmEmail, setPbmEmail] = React.useState<string | null>(null);
+  const [pbmEmailLoading, setPbmEmailLoading] = React.useState(false);
 
   const owedType = filters.owedType ?? "all";
   const pbm = filters.pbm ?? "All";
@@ -51,6 +53,31 @@ export default function ReportActions({ activeTab }: Props) {
   const canShowPreview = pbm !== "All" && pbm !== "Federal" && hasSavedForContext;
   const canShowEmail = pbm !== "All" && pbm !== "Federal" && hasSavedForContext;
   const showEmailLabel = owedType === "underpaid" && pbm !== "All" && pbm !== "Federal";
+
+  // Fetch PBM email when PBM changes (for non-Federal and non-All)
+  React.useEffect(() => {
+    let abort = false;
+    async function loadEmail() {
+      if (!showEmailLabel) {
+        setPbmEmail(null);
+        return;
+      }
+      try {
+        setPbmEmailLoading(true);
+        setPbmEmail(null);
+        const res = await fetch(`/api/pbm-email?pbmName=${encodeURIComponent(pbm)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error("email lookup failed");
+        const data = await res.json();
+        if (!abort) setPbmEmail(data?.email || null);
+      } catch (e) {
+        if (!abort) setPbmEmail(null);
+      } finally {
+        if (!abort) setPbmEmailLoading(false);
+      }
+    }
+    loadEmail();
+    return () => { abort = true; };
+  }, [pbm, showEmailLabel]);
 
   function labelForTab(tab: Props["activeTab"]) {
     switch (tab) {
@@ -210,6 +237,14 @@ export default function ReportActions({ activeTab }: Props) {
         {showEmailLabel && (
           <span className="text-sm font-semibold text-orange-700">
             PBM Email: {pbm}
+            {" "}
+            {pbmEmailLoading ? (
+              <span className="text-gray-500">(loading...)</span>
+            ) : pbmEmail ? (
+              <span className="text-gray-900">{pbmEmail}</span>
+            ) : (
+              <span className="text-gray-500">(no email on file)</span>
+            )}
           </span>
         )}
         {hasSavedForContext && savedPaths?.length ? (
@@ -265,29 +300,79 @@ export default function ReportActions({ activeTab }: Props) {
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Email Preview</DialogTitle>
-            <DialogDescription>
-              This is a non-sending preview. Use "Send Email" to download the .eml.
+        <DialogContent overlayClassName="bg-black/40" className="bg-white max-w-2xl">
+          <DialogHeader className="border-b border-gray-200 pb-4">
+            <DialogTitle className="text-xl text-gray-900 flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">📧</span>
+              </div>
+              Email Preview
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              This is a non-sending preview. Use "Send Email" to download the .eml file.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <div><span className="font-semibold">To:</span> {pbm} (email on file)</div>
-            <div>
-              <span className="font-semibold">Subject:</span> {`${pbm} ${labelForTab(activeTab)} Report ${dateFrom} to ${dateTo}`}
+          
+          {/* Email Header */}
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+              <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                <span className="font-semibold text-gray-700">To:</span>
+                <div>
+                  <div className="font-medium text-gray-900">{pbm}</div>
+                  <div className="text-gray-600 text-xs">
+                    {pbmEmail ? pbmEmail : "email on file"}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold">Body:</span>
-              <pre className="mt-1 whitespace-pre-wrap rounded bg-muted p-2">{`Hello ${pbm},\n\nPlease find attached the ${labelForTab(activeTab)} report for ${dateFrom} to ${dateTo}.\n\nThank you,\nCyber Pharma`}</pre>
+            
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-green-500">
+              <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                <span className="font-semibold text-gray-700">Subject:</span>
+                <span className="font-medium text-gray-900">{`${pbm} ${labelForTab(activeTab)} Report ${dateFrom} to ${dateTo}`}</span>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold">Attachments:</span>
-              <ul className="mt-1 list-disc pl-5">
-                {savedPaths?.map((p) => (
-                  <li key={p}>{p.split("/").pop() || p}</li>
-                ))}
-              </ul>
+          </div>
+
+          {/* Email Body */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="prose prose-sm max-w-none">
+                <div className="text-gray-900 leading-relaxed whitespace-pre-wrap font-mono text-sm bg-gray-50 p-4 rounded border">
+{`Hello ${pbm},
+
+Please find attached the ${labelForTab(activeTab)} report for ${dateFrom} to ${dateTo}.
+
+Thank you,
+Cyber Pharma`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Attachments */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="font-semibold text-gray-700">📎 Attachments:</span>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                {savedPaths?.length || 0} file{(savedPaths?.length || 0) !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {savedPaths?.map((p) => (
+                <div key={p} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 border">
+                  <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">PDF</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 text-sm truncate">
+                      {p.split("/").pop() || p}
+                    </div>
+                    <div className="text-xs text-gray-500">PDF Document</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </DialogContent>
