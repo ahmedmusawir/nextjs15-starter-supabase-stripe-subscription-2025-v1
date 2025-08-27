@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Post } from "@/types/posts";
-import { usePostStore } from "@/store/usePostStore";
+import { usePostStore } from "@/stores/usePostStore";
 
 const formSchema = z.object({
   title: z.string().min(1, {

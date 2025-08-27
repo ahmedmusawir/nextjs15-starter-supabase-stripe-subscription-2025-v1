@@ -43,6 +43,27 @@ type UserDataStore = {
   loading: boolean;
   error: string | null;
   kpis: KPIData;
+  // Map context key -> array of saved PDF storage paths
+  lastSavedPdfByContext: Record<string, string[]>;
+  setLastSavedPdfForContext: (
+    tab: 'commercial' | 'updated' | 'federal' | 'summary',
+    pbm: string,
+    dateFrom: string,
+    dateTo: string,
+    paths: string[]
+  ) => void;
+  getLastSavedPdfForContext: (
+    tab: 'commercial' | 'updated' | 'federal' | 'summary',
+    pbm: string,
+    dateFrom: string,
+    dateTo: string,
+  ) => string[];
+  hasSavedPdfForContext: (
+    tab: 'commercial' | 'updated' | 'federal' | 'summary',
+    pbm: string,
+    dateFrom: string,
+    dateTo: string,
+  ) => boolean;
   
   setFilters: (filters: Partial<Filters>) => void;
   applyFilters: () => void;
@@ -131,6 +152,22 @@ export const useUserDataStore = create<UserDataStore>((set, get) => ({
     scriptsCommercial: 0,
     updatedDifferenceTotal: 0,
     owedTotal: 0
+  },
+  lastSavedPdfByContext: {},
+  setLastSavedPdfForContext: (tab, pbm, dateFrom, dateTo, paths) => {
+    const key = `${tab}|${pbm}|${dateFrom}|${dateTo}`;
+    const current = { ...get().lastSavedPdfByContext };
+    current[key] = Array.isArray(paths) ? paths : [];
+    set({ lastSavedPdfByContext: current });
+  },
+  getLastSavedPdfForContext: (tab, pbm, dateFrom, dateTo) => {
+    const key = `${tab}|${pbm}|${dateFrom}|${dateTo}`;
+    return get().lastSavedPdfByContext[key] || [];
+  },
+  hasSavedPdfForContext: (tab, pbm, dateFrom, dateTo) => {
+    const key = `${tab}|${pbm}|${dateFrom}|${dateTo}`;
+    const arr = get().lastSavedPdfByContext[key] || [];
+    return arr.length > 0;
   },
   
   setFilters: (newFilters) => {
